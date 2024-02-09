@@ -11,17 +11,19 @@
 const CANVAS = document.querySelector("canvas");
 const CTX = CANVAS.getContext("2d");
 
-// Level
-const LEVEL_ROTATION_ANGLE = -45;
+// Road
+const ROAD_WIDTH = 1000;
+const ROAD_DEPTH = 900;
+const ROAD_LOCATION = {x: -600, y: -100, z: -450};
 
 // Player
-const PLAYER_WIDTH = 50;
-const PLAYER_HEIGHT = 50;
-const PLAYER_DEPTH = 50;
+const PLAYER_WIDTH = 100;
+const PLAYER_HEIGHT = 100;
+const PLAYER_DEPTH = 100;
 
-const PLAYER_DEFAULT_SPEED = 3;
+const PLAYER_DEFAULT_SPEED = 1;
 
-const RENDER_DISTANCE = 1000000; // Maximal distance where elements are rendered
+const DEFAULT_PLAYER_LOCATION = {x: -200, y: 118, z: PLAYER_DEPTH / 2};
 
 // Delta-time
 const DEFAULT_FPS = 120;
@@ -31,7 +33,8 @@ const DEFAULT_FPS = 120;
 //#region global-variables
 
 // Player
-let playerLocation = {x: 0, y: 0, z:0};
+let playerLocation = {x: 0, y: 0, z: 0};
+let playerColumn = 0;
 
 // Inputs
 let leftPressed = false;
@@ -40,8 +43,7 @@ let forwardPressed = false;
 let backwardPressed = false;
 
 // Camera
-let cameraX = 0;
-let cameraY = 0;
+let cameraLocation = {x: 0, y: 0};
 
 // Delta-time
 let deltaTime = 1;
@@ -67,19 +69,43 @@ function degToRad(degrees) {
 }
 
 /**
- * Rotate a point around another.
- * @param x Coordinate of the point to rotate in the X axis.
- * @param y Coordinate of the point to rotate in the Y axis.
- * @param centerX Coordinate of the center in the X axis.
- * @param centerY Coordinate of the center in the Y axis.
- * @param rotation Degrees of the rotation.
- * @return {number[]} The rotated point location.
+ * Stroke a specified box.
+ * @param x Location of the box in the X axis.
+ * @param y Location of the box in the Y axis.
+ * @param z Location of the box in the Z axis.
+ * @param width Width of the box.
+ * @param height Height of the box.
+ * @param depth Depth of the box.
  */
-function getRotatedPoint(x, y, centerX, centerY, rotation) {
-    return [
-        (x - centerX) * Math.cos(degToRad(rotation)) - (y - centerY) * Math.sin(degToRad(rotation)) + centerX,
-        (x - centerX) * Math.sin(degToRad(rotation)) + (y - centerY) * Math.cos(degToRad(rotation)) + centerY
-    ];
+function strokeBox(x, y, z, width, height, depth) {
+    CTX.strokeStyle = "black";
+    CTX.fillStyle = "white";
+    let startPoint = [CANVAS.width / 2 + x - Math.cos(degToRad(45)) * z,
+        CANVAS.height / 2 + y - Math.sin(degToRad(45)) * z];
+
+    // Front side
+    let box = new Path2D();
+    CTX.fillRect(startPoint[0], startPoint[1], width, height);
+    CTX.strokeRect(startPoint[0], startPoint[1], width, height);
+
+    // Top side
+    box.moveTo(startPoint[0], startPoint[1]);
+    let leftUpPoint = [startPoint[0] - Math.cos(degToRad(45)) * (depth / 2),
+        startPoint[1] - Math.sin(degToRad(45)) * (depth / 2)];
+    box.lineTo(leftUpPoint[0], leftUpPoint[1]);
+    box.lineTo(leftUpPoint[0] + width, leftUpPoint[1]);
+    box.lineTo(startPoint[0] + width, startPoint[1]);
+    box.lineTo(startPoint[0], startPoint[1]);
+
+    // Left side
+    box.moveTo(leftUpPoint[0], leftUpPoint[1]);
+    box.lineTo(leftUpPoint[0], leftUpPoint[1] + height);
+    box.lineTo(startPoint[0], startPoint[1] + height);
+    box.lineTo(startPoint[0], startPoint[1]);
+    box.closePath();
+
+    CTX.fill(box);
+    CTX.stroke(box);
 }
 
 /**
@@ -92,6 +118,39 @@ function tick() {
 
     // Update the canvas size
     updateCanvasSize();
+
+    // Draw the road
+    strokeBox(ROAD_LOCATION.x, ROAD_LOCATION.y, ROAD_LOCATION.z, ROAD_WIDTH, CANVAS.height, ROAD_DEPTH);
+
+    // Draw the player
+    if (leftPressed) {
+        playerLocation.x -= PLAYER_DEFAULT_SPEED * deltaTime;
+    }
+
+    if (rightPressed) {
+        playerLocation.x += PLAYER_DEFAULT_SPEED * deltaTime;
+    }
+
+    if (forwardPressed && playerColumn > 0) {
+        playerColumn--;
+        playerLocation.z = ROAD_DEPTH / 6 * playerColumn;
+    }
+
+    if (backwardPressed && playerColumn < 2) {
+        playerColumn++;
+        playerLocation.z = ROAD_DEPTH / 6 * playerColumn;
+    }
+
+    // Reset inputs
+    forwardPressed = false;
+    backwardPressed = false;
+
+    strokeBox(DEFAULT_PLAYER_LOCATION.x, DEFAULT_PLAYER_LOCATION.y,
+        DEFAULT_PLAYER_LOCATION.z + playerLocation.z, PLAYER_WIDTH, PLAYER_HEIGHT, PLAYER_DEPTH);
+
+    // Center of the canvas
+    CTX.fillStyle = "black";
+    CTX.fillRect(CANVAS.width / 2, CANVAS.height / 2, 10, 10);
 }
 
 // Start the game
@@ -113,12 +172,12 @@ document.addEventListener("keydown", (e) => {
 
     // Forward
     if (e.key === "w" || e.key === "W" || e.key === "ArrowUp") {
-        forwardPressed = true;
+        //forwardPressed = true;
     }
 
     // Backward
     if (e.key === "s" ||e.key === "S" || e.key === "ArrowDown") {
-        backwardPressed = true;
+        //backwardPressed = true;
     }
 });
 
@@ -136,12 +195,12 @@ document.addEventListener("keyup", (e) => {
 
     // Forward
     if (e.key === "w" || e.key === "W" || e.key === "ArrowUp") {
-        forwardPressed = false;
+        forwardPressed = true;
     }
 
     // Backward
     if (e.key === "s" ||e.key === "S" || e.key === "ArrowDown") {
-        backwardPressed = false;
+        backwardPressed = true;
     }
 });
 
