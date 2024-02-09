@@ -11,6 +11,9 @@
 const CANVAS = document.querySelector("canvas");
 const CTX = CANVAS.getContext("2d");
 
+// Gravity
+const GRAVITY_FORCE = 0.1;
+
 // Road
 const ROAD_WIDTH = 1000;
 const ROAD_DEPTH = 900;
@@ -22,32 +25,43 @@ const PLAYER_HEIGHT = 100;
 const PLAYER_DEPTH = 100;
 
 const PLAYER_DEFAULT_SPEED = 1;
+const PLAYER_HORIZONTAL_SPEED = 6;
+const PLAYER_JUMP_FORCE = 10;
 
 const DEFAULT_PLAYER_LOCATION = {x: -200, y: 118, z: PLAYER_DEPTH / 2};
 
 // Delta-time
 const DEFAULT_FPS = 120;
 
+// Walls
+const WALL_MAX_WIDTH = 1000;
+const WALL_MAX_HEIGHT = 1000;
+
 //#endregion
 
 //#region global-variables
 
 // Player
-let playerLocation = {x: 0, y: 0, z: 0};
+let playerLocation = {x: 0, y: DEFAULT_PLAYER_LOCATION.y, z: 0};
+let playerYVelocity = 0;
 let playerColumn = 0;
+let playerGoalColumn = 0;
 
 // Inputs
 let leftPressed = false;
 let rightPressed = false;
 let forwardPressed = false;
 let backwardPressed = false;
-
-// Camera
-let cameraLocation = {x: 0, y: 0};
+let jumpPressed = false;
 
 // Delta-time
 let deltaTime = 1;
 let lastTick = performance.now();
+
+// Walls
+let walls = [
+    [],[],[]
+];
 
 //#endregion
 
@@ -84,11 +98,11 @@ function strokeBox(x, y, z, width, height, depth) {
         CANVAS.height / 2 + y - Math.sin(degToRad(45)) * z];
 
     // Front side
-    let box = new Path2D();
     CTX.fillRect(startPoint[0], startPoint[1], width, height);
     CTX.strokeRect(startPoint[0], startPoint[1], width, height);
 
     // Top side
+    let box = new Path2D();
     box.moveTo(startPoint[0], startPoint[1]);
     let leftUpPoint = [startPoint[0] - Math.cos(degToRad(45)) * (depth / 2),
         startPoint[1] - Math.sin(degToRad(45)) * (depth / 2)];
@@ -109,6 +123,52 @@ function strokeBox(x, y, z, width, height, depth) {
 }
 
 /**
+ * Create walls of a "wave".
+ */
+function createWalls() {
+    let height = Math.floor(Math.random() * WALL_MAX_HEIGHT);
+
+    let columnFull = [false, false, false];
+    for (let i = 0; i < 3; i++) {
+        if (Math.floor(Math.random() * 2)) {
+            columnFull[i] = true;
+            walls[i].push({
+                x: ROAD_WIDTH,
+                y: DEFAULT_PLAYER_LOCATION.y + PLAYER_HEIGHT - height,
+                width: Math.floor(Math.random() * WALL_MAX_WIDTH),
+                height: height
+            });
+        }
+    }
+
+    if (columnFull[0] && columnFull[1] && columnFull[2]) {
+        let index = Math.floor(Math.random() * 3);
+        walls[index].splice(walls[index].length - 1, 1);
+    }
+}
+
+/**
+ * @return {number} The distance between the nearest wall under the player.
+ */
+function getGroundDistance() {
+    let minDist = null;
+    for (let wall of walls[playerColumn]) {
+        let dist = wall.y - playerLocation.y - PLAYER_HEIGHT
+        if (wall.y >= playerLocation.y + PLAYER_HEIGHT &&
+            DEFAULT_PLAYER_LOCATION.x + PLAYER_WIDTH > wall.x && DEFAULT_PLAYER_LOCATION.x < wall.x + wall.width &&
+            (minDist === null || (dist >= 0 && dist < minDist))) {
+            minDist = dist;
+        }
+    }
+
+    if (minDist === null) {
+         return DEFAULT_PLAYER_LOCATION.y - playerLocation.y;
+    }
+
+    return minDist;
+}
+
+/**
  * Main function, it is executed every frame.
  */
 function tick() {
@@ -122,44 +182,112 @@ function tick() {
     // Draw the road
     strokeBox(ROAD_LOCATION.x, ROAD_LOCATION.y, ROAD_LOCATION.z, ROAD_WIDTH, CANVAS.height, ROAD_DEPTH);
 
-    // Draw the player
-    if (leftPressed) {
-        playerLocation.x -= PLAYER_DEFAULT_SPEED * deltaTime;
+    // Move
+    for (let column of walls) {
+        for (let wall of column) {
+            wall.x -= PLAYER_DEFAULT_SPEED * deltaTime;
+        }
     }
 
-    if (rightPressed) {
-        playerLocation.x += PLAYER_DEFAULT_SPEED * deltaTime;
+    if (leftPressed && playerGoalColumn < 2 && playerColumn >= playerGoalColumn) {
+        playerGoalColumn++;
     }
 
-    if (forwardPressed && playerColumn > 0) {
-        playerColumn--;
-        playerLocation.z = ROAD_DEPTH / 6 * playerColumn;
+    if (rightPressed && playerGoalColumn > 0 && playerColumn <= playerGoalColumn) {
+        playerGoalColumn--;
     }
 
-    if (backwardPressed && playerColumn < 2) {
-        playerColumn++;
-        playerLocation.z = ROAD_DEPTH / 6 * playerColumn;
+    // Gravity + jump
+    let groundDistance = getGroundDistance();
+    if (groundDistance === 0) {
+        if (jumpPressed) {
+            playerYVelocity = -PLAYER_JUMP_FORCE;
+        } else {
+            playerYVelocity = 0;
+        }
+    } else if ((playerYVelocity + GRAVITY_FORCE) * deltaTime > groundDistance) {
+        playerLocation.y += groundDistance;
+        playerYVelocity = 0;
+    } else {
+        playerYVelocity += GRAVITY_FORCE;
+        console.log(playerYVelocity);
     }
+
+    playerLocation.y += playerYVelocity * deltaTime;
 
     // Reset inputs
-    forwardPressed = false;
-    backwardPressed = false;
+    leftPressed = false;
+    rightPressed = false;
+    jumpPressed = false;
 
-    strokeBox(DEFAULT_PLAYER_LOCATION.x, DEFAULT_PLAYER_LOCATION.y,
+    // Change column
+    if (Math.floor(playerLocation.z) !== Math.floor(ROAD_DEPTH / 6 * playerGoalColumn)) {
+        if (Math.floor(playerLocation.z) < Math.floor(ROAD_DEPTH / 6 * playerGoalColumn)) {
+            playerLocation.z += PLAYER_HORIZONTAL_SPEED * deltaTime;
+        } else {
+            playerLocation.z -= PLAYER_HORIZONTAL_SPEED * deltaTime;
+        }
+    } else {
+        playerColumn = playerGoalColumn;
+    }
+
+    //#region Display
+
+    // Draw walls behind the player
+    for (let wall of walls[2]) {
+        strokeBox(wall.x, wall.y, ROAD_DEPTH / 6 * 2, wall.width, wall.height, ROAD_DEPTH / 3);
+    }
+
+    if (playerColumn < 2) {
+        for (let wall of walls[1]) {
+            strokeBox(wall.x, wall.y, ROAD_DEPTH / 6, wall.width, wall.height, ROAD_DEPTH / 3);
+        }
+    }
+
+    if (playerColumn === 0) {
+        for (let wall of walls[0]) {
+            strokeBox(wall.x, wall.y, 0, wall.width, wall.height, ROAD_DEPTH / 3);
+        }
+    }
+
+    // Draw the player
+    strokeBox(DEFAULT_PLAYER_LOCATION.x, playerLocation.y,
         DEFAULT_PLAYER_LOCATION.z + playerLocation.z, PLAYER_WIDTH, PLAYER_HEIGHT, PLAYER_DEPTH);
 
-    // Center of the canvas
-    CTX.fillStyle = "black";
-    CTX.fillRect(CANVAS.width / 2, CANVAS.height / 2, 10, 10);
+    // Draw the walls in front of the player
+    for (let wall of walls[2]) {
+        if (wall.x + wall.width - DEFAULT_PLAYER_LOCATION.x < 0) {
+            strokeBox(wall.x, wall.y, ROAD_DEPTH / 6 * 2, wall.width, wall.height, ROAD_DEPTH / 3);
+        }
+    }
+
+    for (let wall of walls[1]) {
+        if (wall.x + wall.width - DEFAULT_PLAYER_LOCATION.x < 0 || playerColumn === 2) {
+            strokeBox(wall.x, wall.y, ROAD_DEPTH / 6, wall.width, wall.height, ROAD_DEPTH / 3);
+        }
+    }
+
+    for (let wall of walls[0]) {
+        if (wall.x + wall.width - DEFAULT_PLAYER_LOCATION.x < 0 || playerColumn > 0) {
+            strokeBox(wall.x, wall.y, 0, wall.width, wall.height, ROAD_DEPTH / 3);
+        }
+    }
+
+    //#endregion
 }
+
+//createWalls();
+walls[0] = [{x: ROAD_WIDTH - 500, y: DEFAULT_PLAYER_LOCATION.y + PLAYER_HEIGHT - 100, width: 500, height: 100}];
+walls[1] = [{x: ROAD_WIDTH - 500, y: DEFAULT_PLAYER_LOCATION.y + PLAYER_HEIGHT - 100, width: 500, height: 100}];
+walls[2] = [{x: ROAD_WIDTH - 500, y: DEFAULT_PLAYER_LOCATION.y + PLAYER_HEIGHT - 100, width: 500, height: 100}];
 
 // Start the game
 setInterval(tick);
 
 //#region Inputs
 
-// Detect if a key is pressed
-document.addEventListener("keydown", (e) => {
+// Detect if a key is released
+document.addEventListener("keyup", (e) => {
     // Left
     if (e.key === "a" || e.key === "A" || e.key === "ArrowLeft") {
         leftPressed = true;
@@ -170,37 +298,9 @@ document.addEventListener("keydown", (e) => {
         rightPressed = true;
     }
 
-    // Forward
-    if (e.key === "w" || e.key === "W" || e.key === "ArrowUp") {
-        //forwardPressed = true;
-    }
-
-    // Backward
-    if (e.key === "s" ||e.key === "S" || e.key === "ArrowDown") {
-        //backwardPressed = true;
-    }
-});
-
-// Detect if a key is released
-document.addEventListener("keyup", (e) => {
-    // Left
-    if (e.key === "a" || e.key === "A" || e.key === "ArrowLeft") {
-        leftPressed = false;
-    }
-
-    // Right
-    if (e.key === "d"|| e.key === "D" || e.key === "ArrowRight") {
-        rightPressed = false;
-    }
-
-    // Forward
-    if (e.key === "w" || e.key === "W" || e.key === "ArrowUp") {
-        forwardPressed = true;
-    }
-
-    // Backward
-    if (e.key === "s" ||e.key === "S" || e.key === "ArrowDown") {
-        backwardPressed = true;
+    // Jump
+    if (e.key === " " || e.key === "ArrowUp") {
+        jumpPressed = true;
     }
 });
 
