@@ -11,6 +11,9 @@
 const CANVAS = document.querySelector("canvas");
 const CTX = CANVAS.getContext("2d");
 
+// Get the score text element
+const SCORE_TEXT = document.querySelector("#score");
+
 // Gravity
 const GRAVITY_FORCE = 0.1;
 
@@ -25,6 +28,7 @@ const PLAYER_HEIGHT = 100;
 const PLAYER_DEPTH = 100;
 
 const PLAYER_DEFAULT_SPEED = 1;
+const PLAYER_ACCELERATION = 0.0001;
 const PLAYER_HORIZONTAL_SPEED = 6;
 const PLAYER_JUMP_FORCE = 10;
 
@@ -46,12 +50,11 @@ let playerLocation = {x: 0, y: DEFAULT_PLAYER_LOCATION.y, z: 0};
 let playerYVelocity = 0;
 let playerColumn = 0;
 let playerGoalColumn = 0;
+let playerSpeed = PLAYER_DEFAULT_SPEED;
 
 // Inputs
 let leftPressed = false;
 let rightPressed = false;
-let forwardPressed = false;
-let backwardPressed = false;
 let jumpPressed = false;
 
 // Delta-time
@@ -185,10 +188,17 @@ function tick() {
     // Move
     for (let column of walls) {
         for (let wall of column) {
-            wall.x -= PLAYER_DEFAULT_SPEED * deltaTime;
+            wall.x -= playerSpeed * deltaTime;
         }
     }
 
+    // Move the position of the player
+    playerLocation.x += playerSpeed * deltaTime;
+
+    // Accelerate
+    playerSpeed += PLAYER_ACCELERATION;
+
+    // Search if the player want to move in another column
     if (leftPressed && playerGoalColumn < 2 && playerColumn >= playerGoalColumn) {
         playerGoalColumn++;
     }
@@ -210,7 +220,6 @@ function tick() {
         playerYVelocity = 0;
     } else {
         playerYVelocity += GRAVITY_FORCE;
-        console.log(playerYVelocity);
     }
 
     playerLocation.y += playerYVelocity * deltaTime;
@@ -232,6 +241,24 @@ function tick() {
     }
 
     //#region Display
+
+    // Display the score
+    let score = Math.floor(playerLocation.x / 20);
+    let scoreString = "";
+    if (score < 10000) {
+        scoreString += "0";
+        if (score < 1000) {
+            scoreString += "0";
+            if (score < 100) {
+                scoreString += "0";
+                if (score < 10) {
+                    scoreString += "0";
+                }
+            }
+        }
+    }
+
+    SCORE_TEXT.innerHTML = scoreString + score;
 
     // Draw walls behind the player
     for (let wall of walls[2]) {

@@ -4,21 +4,37 @@
     <meta charset="UTF-8">
     <title>Elephant run</title>
     <style>
+        @font-face {
+            font-family: pixelated-font;
+            src: url("fonts/pixelated-font.ttf");
+        }
+
         body {
             margin: 0;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-family: "pixelated-font", "sans-serif";
+            font-size: 3em;
+            user-select: none;
         }
 
         canvas {
             width: 100vw;
             height: 100vh;
         }
+
+        #score {
+            position: absolute;
+            top: 0;
+            right: 0;
+            margin: 50px;
+        }
     </style>
 </head>
 <body>
     <canvas></canvas>
+    <p id="score">00000</p>
     <script src="./js/main.js"></script>
 </body>
 </html>
