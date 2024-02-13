@@ -39,7 +39,8 @@ const DEFAULT_FPS = 120;
 
 // Walls
 const WALL_MAX_WIDTH = 1000;
-const WALL_MAX_HEIGHT = 1000;
+const WALL_MAX_HEIGHT = 500;
+const LITTLE_WALL_MAX_HEIGHT = PLAYER_HEIGHT;
 
 //#endregion
 
@@ -66,15 +67,10 @@ let walls = [
     [],[],[]
 ];
 
+let lastWallsStart = null;
+
 //#endregion
 
-/**
- * Adapt the canvas size to the window size.
- */
-function updateCanvasSize() {
-    CANVAS.width = window.innerWidth;
-    CANVAS.height = window.innerHeight;
-}
 
 /**
  * Convert degrees to radians.
@@ -134,7 +130,7 @@ function createWalls() {
     let columnFull = [false, false, false];
     for (let i = 0; i < 3; i++) {
         if (Math.floor(Math.random() * 2)) {
-            columnFull[i] = true;
+            columnFull[i] = height > LITTLE_WALL_MAX_HEIGHT;
             walls[i].push({
                 x: ROAD_WIDTH,
                 y: DEFAULT_PLAYER_LOCATION.y + PLAYER_HEIGHT - height,
@@ -147,6 +143,8 @@ function createWalls() {
     if (columnFull[0] && columnFull[1] && columnFull[2]) {
         let index = Math.floor(Math.random() * 3);
         walls[index].splice(walls[index].length - 1, 1);
+    } else if (!columnFull[0] && !columnFull[1] && !columnFull[2]) {
+        createWalls();
     }
 }
 
@@ -179,11 +177,11 @@ function tick() {
     deltaTime = (performance.now() - lastTick) / (1000 / DEFAULT_FPS);
     lastTick = performance.now();
 
-    // Update the canvas size
-    updateCanvasSize();
-
-    // Draw the road
-    strokeBox(ROAD_LOCATION.x, ROAD_LOCATION.y, ROAD_LOCATION.z, ROAD_WIDTH, CANVAS.height, ROAD_DEPTH);
+    // Create new wall
+    if (Math.floor(playerLocation.x) !== lastWallsStart && Math.floor(playerLocation.x) % (WALL_MAX_WIDTH * 2) === 0) {
+        createWalls();
+        lastWallsStart = Math.floor(playerLocation.x);
+    }
 
     // Move
     for (let column of walls) {
@@ -240,7 +238,31 @@ function tick() {
         playerColumn = playerGoalColumn;
     }
 
+    // Check if the player is in a wall
+    for (let wall of walls[playerColumn]) {
+        if (DEFAULT_PLAYER_LOCATION.x + PLAYER_WIDTH > wall.x &&
+            DEFAULT_PLAYER_LOCATION.x < wall.x + wall.width &&
+            playerLocation.y + PLAYER_HEIGHT > wall.y && playerLocation.y < wall.y + wall.height) {
+            // Stop the game
+            clearInterval(loop);
+        }
+    }
+
+    // Delete walls out of range
+    for (let column of walls) {
+        for (let i = column.length - 1; i >= 0; i--) {
+            let range = CANVAS.width < ROAD_WIDTH ? -ROAD_WIDTH : -CANVAS.width;
+            if (column[i].x + column[i].width < range) {
+                column.splice(i, 1);
+            }
+        }
+    }
+
     //#region Display
+
+    // Adapt the canvas size to the window size
+    CANVAS.width = window.innerWidth;
+    CANVAS.height = window.innerHeight;
 
     // Display the score
     let score = Math.floor(playerLocation.x / 20);
@@ -259,6 +281,9 @@ function tick() {
     }
 
     SCORE_TEXT.innerHTML = scoreString + score;
+
+    // Draw the road
+    strokeBox(ROAD_LOCATION.x, ROAD_LOCATION.y, ROAD_LOCATION.z, ROAD_WIDTH, CANVAS.height, ROAD_DEPTH);
 
     // Draw walls behind the player
     for (let wall of walls[2]) {
@@ -303,13 +328,14 @@ function tick() {
     //#endregion
 }
 
-//createWalls();
+/*
 walls[0] = [{x: ROAD_WIDTH - 500, y: DEFAULT_PLAYER_LOCATION.y + PLAYER_HEIGHT - 100, width: 500, height: 100}];
 walls[1] = [{x: ROAD_WIDTH - 500, y: DEFAULT_PLAYER_LOCATION.y + PLAYER_HEIGHT - 100, width: 500, height: 100}];
 walls[2] = [{x: ROAD_WIDTH - 500, y: DEFAULT_PLAYER_LOCATION.y + PLAYER_HEIGHT - 100, width: 500, height: 100}];
+*/
 
 // Start the game
-setInterval(tick);
+let loop = setInterval(tick);
 
 //#region Inputs
 
