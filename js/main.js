@@ -110,9 +110,9 @@ function degToRad(degrees) {
  * @param fillColor Color of the faces of the box.
  * @param strokeColor Color of the edges of the box.
  */
-function strokeBox(x, y, z, width, height, depth, fillColor = "white", strokeColor = "black") {
+function strokeBox(x, y, z, width, height, depth, fillColor = ["white", "white", "white"], strokeColor = "black") {
     CTX.strokeStyle = strokeColor;
-    CTX.fillStyle = fillColor;
+    CTX.fillStyle = fillColor[2];
     let startPoint = [CANVAS.width / 2 + x - Math.cos(degToRad(45)) * z,
         CANVAS.height / 2 + y - Math.sin(degToRad(45)) * z];
 
@@ -121,24 +121,30 @@ function strokeBox(x, y, z, width, height, depth, fillColor = "white", strokeCol
     CTX.strokeRect(startPoint[0], startPoint[1], width, height);
 
     // Top side
-    let box = new Path2D();
-    box.moveTo(startPoint[0], startPoint[1]);
+    let top = new Path2D();
+    top.moveTo(startPoint[0], startPoint[1]);
     let leftUpPoint = [startPoint[0] - Math.cos(degToRad(45)) * (depth / 2),
         startPoint[1] - Math.sin(degToRad(45)) * (depth / 2)];
-    box.lineTo(leftUpPoint[0], leftUpPoint[1]);
-    box.lineTo(leftUpPoint[0] + width, leftUpPoint[1]);
-    box.lineTo(startPoint[0] + width, startPoint[1]);
-    box.lineTo(startPoint[0], startPoint[1]);
+    top.lineTo(leftUpPoint[0], leftUpPoint[1]);
+    top.lineTo(leftUpPoint[0] + width, leftUpPoint[1]);
+    top.lineTo(startPoint[0] + width, startPoint[1]);
+    top.lineTo(startPoint[0], startPoint[1]);
+
+    CTX.fillStyle = fillColor[1];
+    CTX.fill(top);
+    CTX.stroke(top);
 
     // Left side
-    box.moveTo(leftUpPoint[0], leftUpPoint[1]);
-    box.lineTo(leftUpPoint[0], leftUpPoint[1] + height);
-    box.lineTo(startPoint[0], startPoint[1] + height);
-    box.lineTo(startPoint[0], startPoint[1]);
-    box.closePath();
+    let left = new Path2D();
+    left.moveTo(leftUpPoint[0], leftUpPoint[1]);
+    left.lineTo(leftUpPoint[0], leftUpPoint[1] + height);
+    left.lineTo(startPoint[0], startPoint[1] + height);
+    left.lineTo(startPoint[0], startPoint[1]);
+    left.closePath();
 
-    CTX.fill(box);
-    CTX.stroke(box);
+    CTX.fillStyle = fillColor[0];
+    CTX.fill(left);
+    CTX.stroke(left);
 }
 
 /**
@@ -356,24 +362,24 @@ function tick() {
     SCORE_TEXT.innerHTML = scoreString + score;
 
     // Draw the road
-    strokeBox(-CANVAS.width, ROAD_LOCATION.y, ROAD_LOCATION.z, CANVAS.width * 2, CANVAS.height, ROAD_DEPTH, "skyblue");
+    strokeBox(-CANVAS.width, ROAD_LOCATION.y, ROAD_LOCATION.z, CANVAS.width * 2, CANVAS.height, ROAD_DEPTH, ["#997967", "#966b54", "#7a5743"]);
 
     // Draw walls behind the player
     for (let wall of walls[2]) {
         if (wall.x + wall.width - DEFAULT_PLAYER_LOCATION.x >= 0) {
-            strokeBox(wall.x, wall.y, ROAD_DEPTH / 3, wall.width, wall.height, ROAD_DEPTH / 3, "orange");
+            strokeBox(wall.x, wall.y, ROAD_DEPTH / 3, wall.width, wall.height, ROAD_DEPTH / 3, ["#fc9423", "#fc8403", "#c76700"]);
         }
     }
 
     if (Math.floor(playerLocation.z + PLAYER_DEPTH / 2) < Math.floor(ROAD_DEPTH / 3)) {
         for (let wall of walls[1]) {
-            strokeBox(wall.x, wall.y, ROAD_DEPTH / 6, wall.width, wall.height, ROAD_DEPTH / 3, "orange");
+            strokeBox(wall.x, wall.y, ROAD_DEPTH / 6, wall.width, wall.height, ROAD_DEPTH / 3, ["#fc9423", "#fc8403", "#c76700"]);
         }
     }
 
     if (Math.floor(playerLocation.z + PLAYER_DEPTH / 2) < Math.floor(ROAD_DEPTH / 6)) {
         for (let wall of walls[0]) {
-            strokeBox(wall.x, wall.y, 0, wall.width, wall.height, ROAD_DEPTH / 3, "orange");
+            strokeBox(wall.x, wall.y, 0, wall.width, wall.height, ROAD_DEPTH / 3, ["#fc9423", "#fc8403", "#c76700"]);
         }
     }
 
@@ -396,19 +402,19 @@ function tick() {
     // Draw the walls in front of the player
     for (let wall of walls[2]) {
         if (wall.x + wall.width - DEFAULT_PLAYER_LOCATION.x < 0) {
-            strokeBox(wall.x, wall.y, ROAD_DEPTH / 3, wall.width, wall.height, ROAD_DEPTH / 3, "orange");
+            strokeBox(wall.x, wall.y, ROAD_DEPTH / 3, wall.width, wall.height, ROAD_DEPTH / 3, ["#fc9423", "#fc8403", "#c76700"]);
         }
     }
 
     for (let wall of walls[1]) {
         if (wall.x + wall.width - DEFAULT_PLAYER_LOCATION.x < 0 || Math.floor(playerLocation.z + PLAYER_DEPTH / 2) >= Math.floor(ROAD_DEPTH / 3)) {
-            strokeBox(wall.x, wall.y, ROAD_DEPTH / 6, wall.width, wall.height, ROAD_DEPTH / 3, "orange");
+            strokeBox(wall.x, wall.y, ROAD_DEPTH / 6, wall.width, wall.height, ROAD_DEPTH / 3, ["#fc9423", "#fc8403", "#c76700"]);
         }
     }
 
     for (let wall of walls[0]) {
         if (wall.x + wall.width - DEFAULT_PLAYER_LOCATION.x < 0 || Math.floor(playerLocation.z + PLAYER_DEPTH / 2) >= Math.floor(ROAD_DEPTH / 6)) {
-            strokeBox(wall.x, wall.y, 0, wall.width, wall.height, ROAD_DEPTH / 3, "orange");
+            strokeBox(wall.x, wall.y, 0, wall.width, wall.height, ROAD_DEPTH / 3, ["#fc9423", "#fc8403", "#c76700"]);
         }
     }
 
