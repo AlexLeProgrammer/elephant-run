@@ -12,8 +12,14 @@ const CANVAS = document.querySelector("canvas");
 const CTX = CANVAS.getContext("2d");
 
 // Get the images
-const ELEPHANT_TEXTURE = new Image();
-ELEPHANT_TEXTURE.src = "./img/elephant.png";
+const ELEPHANT_TEXTURES_ANIMATION = [new Image(), new Image(), new Image(), new Image(), new Image(), new Image(), new Image()];
+ELEPHANT_TEXTURES_ANIMATION[0].src = "./img/elephant.png";
+ELEPHANT_TEXTURES_ANIMATION[1].src = "./img/elephant.png";
+ELEPHANT_TEXTURES_ANIMATION[2].src = "./img/elephant1.png";
+ELEPHANT_TEXTURES_ANIMATION[3].src = "./img/elephant2.png";
+ELEPHANT_TEXTURES_ANIMATION[4].src = "./img/elephant3.png";
+ELEPHANT_TEXTURES_ANIMATION[5].src = "./img/elephant.png";
+ELEPHANT_TEXTURES_ANIMATION[6].src = "./img/elephant.png";
 
 // Get the score text element
 const SCORE_TEXT = document.querySelector("#score");
@@ -47,6 +53,9 @@ const WALL_MAX_WIDTH = 1000;
 const WALL_MAX_HEIGHT = 500;
 const LITTLE_WALL_MAX_HEIGHT = PLAYER_HEIGHT;
 
+// Animation
+const TIME_BEFORE_NEXT_FRAME = 8;
+
 //#endregion
 
 //#region global-variables
@@ -75,6 +84,10 @@ let walls = [
 
 let lastWallsTime = null;
 let lastMaxWallWidth = 1;
+
+// Animation
+let actualFrameIndex = 0;
+let lastFrameTime = null;
 
 //#endregion
 
@@ -369,9 +382,18 @@ function tick() {
     // Draw the player
     /*strokeBox(DEFAULT_PLAYER_LOCATION.x, playerLocation.y,
         DEFAULT_PLAYER_LOCATION.z + playerLocation.z, PLAYER_WIDTH, PLAYER_HEIGHT, PLAYER_DEPTH);*/
+
+    if (Math.floor(performance.now() / 10) % TIME_BEFORE_NEXT_FRAME === 0 && lastFrameTime !== Math.floor(performance.now() / 10)) {
+        actualFrameIndex++;
+        if (actualFrameIndex >= ELEPHANT_TEXTURES_ANIMATION.length) {
+            actualFrameIndex = 0;
+        }
+        lastFrameTime = Math.floor(performance.now() / 10);
+    }
+
     draw3dImage(DEFAULT_PLAYER_LOCATION.x, playerLocation.y,
-        DEFAULT_PLAYER_LOCATION.z + playerLocation.z, ELEPHANT_TEXTURE.width / 1.8,
-        ELEPHANT_TEXTURE.height / 1.8, PLAYER_DEPTH, ELEPHANT_TEXTURE);
+        DEFAULT_PLAYER_LOCATION.z + playerLocation.z, ELEPHANT_TEXTURES_ANIMATION[actualFrameIndex].width / 1.8,
+        ELEPHANT_TEXTURES_ANIMATION[actualFrameIndex].height / 1.8, PLAYER_DEPTH, ELEPHANT_TEXTURES_ANIMATION[actualFrameIndex]);
 
     // Draw the walls in front of the player
     for (let wall of walls[2]) {
