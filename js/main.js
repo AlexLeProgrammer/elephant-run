@@ -12,14 +12,12 @@ const CANVAS = document.querySelector("canvas");
 const CTX = CANVAS.getContext("2d");
 
 // Get the images
-const ELEPHANT_TEXTURES_ANIMATION = [new Image(), new Image(), new Image(), new Image(), new Image(), new Image(), new Image()];
+const ELEPHANT_TEXTURES_ANIMATION = [new Image(), new Image(), new Image(), new Image(), new Image()];
 ELEPHANT_TEXTURES_ANIMATION[0].src = "./img/elephant.png";
-ELEPHANT_TEXTURES_ANIMATION[1].src = "./img/elephant.png";
-ELEPHANT_TEXTURES_ANIMATION[2].src = "./img/elephant1.png";
-ELEPHANT_TEXTURES_ANIMATION[3].src = "./img/elephant2.png";
-ELEPHANT_TEXTURES_ANIMATION[4].src = "./img/elephant3.png";
-ELEPHANT_TEXTURES_ANIMATION[5].src = "./img/elephant.png";
-ELEPHANT_TEXTURES_ANIMATION[6].src = "./img/elephant.png";
+ELEPHANT_TEXTURES_ANIMATION[1].src = "./img/elephant1.png";
+ELEPHANT_TEXTURES_ANIMATION[2].src = "./img/elephant2.png";
+ELEPHANT_TEXTURES_ANIMATION[3].src = "./img/elephant3.png";
+ELEPHANT_TEXTURES_ANIMATION[4].src = "./img/elephant.png";
 
 // Get the score text element
 const SCORE_TEXT = document.querySelector("#score");
