@@ -11,6 +11,10 @@
 const CANVAS = document.querySelector("canvas");
 const CTX = CANVAS.getContext("2d");
 
+// Get the images
+const ELEPHANT_TEXTURE = new Image();
+ELEPHANT_TEXTURE.src = "./img/elephant.png";
+
 // Get the score text element
 const SCORE_TEXT = document.querySelector("#score");
 
@@ -18,13 +22,12 @@ const SCORE_TEXT = document.querySelector("#score");
 const GRAVITY_FORCE = 0.2;
 
 // Road
-const ROAD_WIDTH = 1000;
-const ROAD_DEPTH = 900;
-const ROAD_LOCATION = {x: -600, y: -100, z: -450};
+const ROAD_DEPTH = 800;
+const ROAD_LOCATION = {x: 0, y: -100, z: -450};
 
 // Player
-const PLAYER_WIDTH = 100;
-const PLAYER_HEIGHT = 100;
+const PLAYER_WIDTH = 75;
+const PLAYER_HEIGHT = 90;
 const PLAYER_DEPTH = 100;
 
 const PLAYER_DEFAULT_SPEED = 2;
@@ -33,12 +36,13 @@ const PLAYER_ACCELERATION = 0.0005;
 const PLAYER_HORIZONTAL_SPEED = 6;
 const PLAYER_JUMP_FORCE = 9;
 
-const DEFAULT_PLAYER_LOCATION = {x: -200, y: 118, z: PLAYER_DEPTH / 2};
+const DEFAULT_PLAYER_LOCATION = {x: -400, y: 128, z: PLAYER_DEPTH / 2};
 
 // Delta-time
 const DEFAULT_FPS = 120;
 
 // Walls
+const WALL_X_START = 1500;
 const WALL_MAX_WIDTH = 1000;
 const WALL_MAX_HEIGHT = 500;
 const LITTLE_WALL_MAX_HEIGHT = PLAYER_HEIGHT;
@@ -127,6 +131,23 @@ function strokeBox(x, y, z, width, height, depth, fillColor = "white", strokeCol
 }
 
 /**
+ * Draw an image in a 3D space.
+ * @param x Location of the box in the X axis.
+ * @param y Location of the box in the Y axis.
+ * @param z Location of the box in the Z axis.
+ * @param width Width of the image.
+ * @param height Height of the image.
+ * @param depth Depth of the box.
+ * @param img Image to draw.
+ */
+function draw3dImage(x, y, z, width, height, depth, img) {
+    CTX.drawImage(img, CANVAS.width / 2 + x - Math.cos(degToRad(45)) * z
+        - Math.cos(degToRad(45)) * (depth / 2),
+        CANVAS.height / 2 + y - Math.sin(degToRad(45)) * z
+        - Math.sin(degToRad(45)) * (depth / 2), width, height)
+}
+
+/**
  * Create walls of a "wave".
  */
 function createWalls() {
@@ -149,7 +170,7 @@ function createWalls() {
             }
 
             walls[i].push({
-                x: ROAD_WIDTH,
+                x: WALL_X_START,
                 y: DEFAULT_PLAYER_LOCATION.y + PLAYER_HEIGHT - height,
                 width: width,
                 height: height
@@ -236,6 +257,15 @@ function tick() {
         playerGoalColumn--;
     }
 
+    // Change column
+    if (Math.floor(playerLocation.z) !== Math.floor(ROAD_DEPTH / 6 * playerGoalColumn)) {
+        if (Math.floor(playerLocation.z) < Math.floor(ROAD_DEPTH / 6 * playerGoalColumn)) {
+            playerLocation.z += PLAYER_HORIZONTAL_SPEED * deltaTime;
+        } else {
+            playerLocation.z -= PLAYER_HORIZONTAL_SPEED * deltaTime;
+        }
+    }
+
     // Gravity + jump
     let groundDistance = getGroundDistance();
     if (groundDistance === 0) {
@@ -258,23 +288,15 @@ function tick() {
     rightPressed = false;
     jumpPressed = false;
 
-    // Change column
-    if (Math.floor(playerLocation.z) !== Math.floor(ROAD_DEPTH / 6 * playerGoalColumn)) {
-        if (Math.floor(playerLocation.z) < Math.floor(ROAD_DEPTH / 6 * playerGoalColumn)) {
-            playerLocation.z += PLAYER_HORIZONTAL_SPEED * deltaTime;
-        } else {
-            playerLocation.z -= PLAYER_HORIZONTAL_SPEED * deltaTime;
-        }
-    }
-
     // Check if the player is in a wall
     for (let i = 0; i < walls.length; i++) {
         for (let wall of walls[i]) {
-            let z = i < 2 ? i === 0 ? 0 : ROAD_DEPTH / 6 : ROAD_DEPTH / 6 * 2;
+            let z = i < 2 ? i === 0 ? 0 : ROAD_DEPTH / 6 : ROAD_DEPTH / 3;
             if (DEFAULT_PLAYER_LOCATION.x + PLAYER_WIDTH > wall.x &&
                 DEFAULT_PLAYER_LOCATION.x < wall.x + wall.width &&
                 playerLocation.y + PLAYER_HEIGHT > wall.y && playerLocation.y < wall.y + wall.height &&
-                playerLocation.z + PLAYER_DEPTH / 2 > z && playerLocation.z < z + ROAD_DEPTH / 6) {
+                playerLocation.z + DEFAULT_PLAYER_LOCATION.z + PLAYER_DEPTH / 2 > z &&
+                playerLocation.z + DEFAULT_PLAYER_LOCATION.z < z + ROAD_DEPTH / 6) {
                 // Stop the game
                 clearInterval(loop);
 
@@ -292,8 +314,7 @@ function tick() {
     // Delete walls out of range
     for (let column of walls) {
         for (let i = column.length - 1; i >= 0; i--) {
-            let range = CANVAS.width < ROAD_WIDTH ? -ROAD_WIDTH : -CANVAS.width;
-            if (column[i].x + column[i].width < range) {
+            if (column[i].x + column[i].width < - CANVAS.width) {
                 column.splice(i, 1);
             }
         }
@@ -324,7 +345,7 @@ function tick() {
     SCORE_TEXT.innerHTML = scoreString + score;
 
     // Draw the road
-    strokeBox(ROAD_LOCATION.x, ROAD_LOCATION.y, ROAD_LOCATION.z, ROAD_WIDTH, CANVAS.height, ROAD_DEPTH, "skyblue");
+    strokeBox(-CANVAS.width, ROAD_LOCATION.y, ROAD_LOCATION.z, CANVAS.width * 2, CANVAS.height, ROAD_DEPTH, "skyblue");
 
     // Draw walls behind the player
     for (let wall of walls[2]) {
@@ -346,8 +367,11 @@ function tick() {
     }
 
     // Draw the player
-    strokeBox(DEFAULT_PLAYER_LOCATION.x, playerLocation.y,
-        DEFAULT_PLAYER_LOCATION.z + playerLocation.z, PLAYER_WIDTH, PLAYER_HEIGHT, PLAYER_DEPTH);
+    /*strokeBox(DEFAULT_PLAYER_LOCATION.x, playerLocation.y,
+        DEFAULT_PLAYER_LOCATION.z + playerLocation.z, PLAYER_WIDTH, PLAYER_HEIGHT, PLAYER_DEPTH);*/
+    draw3dImage(DEFAULT_PLAYER_LOCATION.x, playerLocation.y,
+        DEFAULT_PLAYER_LOCATION.z + playerLocation.z, ELEPHANT_TEXTURE.width / 1.8,
+        ELEPHANT_TEXTURE.height / 1.8, PLAYER_DEPTH, ELEPHANT_TEXTURE);
 
     // Draw the walls in front of the player
     for (let wall of walls[2]) {
@@ -378,6 +402,7 @@ walls[2] = [{x: ROAD_WIDTH - 500, y: DEFAULT_PLAYER_LOCATION.y + PLAYER_HEIGHT -
 */
 
 // Start the game
+createWalls();
 let loop = setInterval(tick);
 
 //#region Inputs
